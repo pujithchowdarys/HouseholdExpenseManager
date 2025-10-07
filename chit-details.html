@@ -1,0 +1,63 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Chit Details</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="assets/css/style.css"></head><body>
+<header class="topbar"><a href="chit.html">← Back</a><h1>Chit Details</h1></header>
+<main class="container">
+  <h2 id="chit-name">Loading…</h2>
+  <p id="chit-meta"></p>
+  <div class="actions"><button id="add-member">Add member</button> <button id="add-tx">Add transaction</button> <button id="pick-winner">Pick random winner</button></div>
+  <h3>Members</h3>
+  <ul id="members"></ul>
+  <h3>Transactions</h3>
+  <ul id="chit-tx"></ul>
+</main>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-config.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/firestore.js"></script>
+<script>
+onAuthStateChanged(async user=>{
+  if(!user) location.href='index.html';
+  const id = localStorage.getItem('chitId');
+  if(!id) return alert('No chit selected');
+  const doc = await db.collection('chits').doc(id).get();
+  const data = doc.data();
+  document.getElementById('chit-name').textContent = data.name;
+  document.getElementById('chit-meta').textContent = 'Value: ' + data.value + ' Members: ' + data.members;
+  loadMembers(id);
+  loadTx(id);
+
+  document.getElementById('add-member').addEventListener('click', async ()=>{
+    const name = prompt('Member name'); if(!name) return;
+    await db.collection('chitMembers').add({chitId: id, name, joinedAt: Date.now(), tookMoney: false});
+    loadMembers(id);
+  });
+  document.getElementById('add-tx').addEventListener('click', async ()=>{
+    const member = prompt('Member name or id'); const amt = parseFloat(prompt('Amount')); if(isNaN(amt)) return;
+    await db.collection('chitTx').add({chitId:id, member, amount:amt, date:Date.now()});
+    loadTx(id);
+  });
+  document.getElementById('pick-winner').addEventListener('click', async ()=>{
+    const memSnap = await db.collection('chitMembers').where('chitId','==',id).where('tookMoney','==', false).get();
+    if(memSnap.empty){ alert('No eligible members'); return; }
+    const arr = memSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const pick = arr[Math.floor(Math.random()*arr.length)];
+    alert('Winner: ' + pick.name);
+    // mark as tookMoney
+    await db.collection('chitMembers').doc(pick.id).update({tookMoney:true});
+    loadMembers(id);
+  });
+});
+
+async function loadMembers(chitId){
+  const snap = await db.collection('chitMembers').where('chitId','==',chitId).get();
+  const ul = document.getElementById('members'); ul.innerHTML = '';
+  snap.docs.forEach(d=>{ const dt=d.data(); const li=document.createElement('li'); li.textContent = dt.name + (dt.tookMoney? ' (took money)':''); ul.appendChild(li); });
+}
+
+async function loadTx(chitId){
+  const snap = await db.collection('chitTx').where('chitId','==',chitId).orderBy('date','desc').get();
+  const ul = document.getElementById('chit-tx'); ul.innerHTML=''; snap.docs.forEach(d=>{const dt=d.data(); const li=document.createElement('li'); li.textContent = dt.member + ' — ' + dt.amount + ' (' + new Date(dt.date).toLocaleString() + ')'; ul.appendChild(li);});
+}
+</script>
+</body></html>

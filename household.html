@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8"><title>Household</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/css/style.css">
+</head><body>
+  <header class="topbar"><a href="dashboard.html">← Dashboard</a><h1>Household Expenses</h1></header>
+  <main class="container">
+    <section>
+      <div class="actions"><button id="add-tx-btn">Add Transaction</button></div>
+      <h2>Transactions</h2>
+      <table id="household-table"><thead><tr><th>Date</th><th>Amount</th><th>Reason</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script src="assets/js/firebase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/firestore.js"></script>
+  <script>
+    onAuthStateChanged(user=>{
+      if(!user) location.href='index.html';
+      loadHousehold();
+    });
+    document.getElementById('add-tx-btn').addEventListener('click', async ()=>{
+      const amt = parseFloat(prompt('Amount (positive = expense, negative = income)')); if(isNaN(amt)) return;
+      const reason = prompt('Reason');
+      await addHouseholdTx({amount: amt, reason, date: Date.now()});
+      loadHousehold();
+    });
+    async function loadHousehold(){
+      const list = await getHouseholdTx();
+      const tbody = document.querySelector('#household-table tbody');
+      tbody.innerHTML = '';
+      list.forEach(t=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${new Date(t.date).toLocaleString()}</td><td>${t.amount}</td><td>${t.reason || ''}</td><td><button data-id="${t.id}" class="del">Remove</button></td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('.del').forEach(btn=> btn.addEventListener('click', async e=>{
+        await deleteHouseholdTx(e.target.dataset.id); loadHousehold();
+      }));
+    }
+  </script>
+</body></html>

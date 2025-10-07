@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Business & Chits — Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Welcome — Business & Chits App</h1>
+    <section id="auth-section">
+      <div class="card">
+        <h2>Login</h2>
+        <input id="login-username" placeholder="Username (email or id)">
+        <button id="login-start">Next</button>
+        <p class="muted">Or <a href="#" id="show-signup">Create account</a></p>
+      </div>
+
+      <div class="card hidden" id="signup-card">
+        <h2>Create account</h2>
+        <input id="signup-name" placeholder="Full name">
+        <input id="signup-email" placeholder="Email">
+        <input id="signup-phone" placeholder="Phone number">
+        <input id="signup-username" placeholder="Username">
+        <input id="signup-password" placeholder="Password" type="password">
+        <input id="signup-password-confirm" placeholder="Confirm password" type="password">
+        <button id="signup-submit">Sign up</button>
+        <p class="muted"><a href="#" id="show-login">Back to login</a></p>
+      </div>
+    </section>
+    <p class="muted small">This is a starter prototype. Replace Firebase config in assets/js/firebase-config.js.</p>
+  <p style="text-align:center;"><a href="dashboard.html" class="btn">Preview Dashboard UI</a></p></main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script src="assets/js/firebase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    // simple UI bindings
+    document.getElementById('show-signup').addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('signup-card').classList.remove('hidden');
+    });
+    document.getElementById('show-login').addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('signup-card').classList.add('hidden');
+    });
+
+    document.getElementById('login-start').addEventListener('click', async () => {
+      const username = document.getElementById('login-username').value.trim();
+      if(!username){ alert('Enter username'); return; }
+      // For prototype we assume username is email. Prompt password
+      const password = prompt('Enter password for ' + username);
+      if(!password) return;
+      try{
+        await authSignIn(username, password);
+        window.location.href = 'dashboard.html';
+      }catch(err){
+        alert('Login failed: ' + err.message);
+      }
+    });
+
+    document.getElementById('signup-submit').addEventListener('click', async () => {
+      const name = document.getElementById('signup-name').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const phone = document.getElementById('signup-phone').value.trim();
+      const username = document.getElementById('signup-username').value.trim();
+      const pw = document.getElementById('signup-password').value;
+      const pwc = document.getElementById('signup-password-confirm').value;
+      if(!email || !pw || pw!==pwc){ alert('Please check inputs'); return; }
+      try{
+        await authSignUp(email, pw, {name, phone, username});
+        alert('Account created — you will be redirected to dashboard');
+        window.location.href = 'dashboard.html';
+      }catch(err){
+        alert('Signup failed: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

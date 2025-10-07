@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Loan Details</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="assets/css/style.css"></head><body>
+<header class="topbar"><a href="loans.html">← Back</a><h1>Loan Details</h1></header>
+<main class="container">
+  <h2 id="loan-title">Loading…</h2>
+  <p id="loan-balance"></p>
+  <div class="actions"><button id="add-payment">Add Payment</button></div>
+  <h3>Transactions</h3>
+  <ul id="loan-tx"></ul>
+</main>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-config.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/firestore.js"></script>
+<script>
+onAuthStateChanged(async user=>{
+  if(!user) location.href='index.html';
+  const id = localStorage.getItem('loanId');
+  if(!id) return alert('No loan selected');
+  const doc = await db.collection('loans').doc(id).get();
+  const data = doc.data();
+  document.getElementById('loan-title').textContent = data.title;
+  document.getElementById('loan-balance').textContent = 'Balance: ' + data.balance;
+  document.getElementById('add-payment').addEventListener('click', async ()=>{
+    const amt = parseFloat(prompt('Payment amount')); if(isNaN(amt)) return;
+    await db.collection('loanTx').add({loanId:id, amount:amt, date:Date.now()});
+    await db.collection('loans').doc(id).update({balance: (data.balance||0) - amt});
+    location.reload();
+  });
+  const snap = await db.collection('loanTx').where('loanId','==',id).orderBy('date','desc').get();
+  const ul = document.getElementById('loan-tx'); ul.innerHTML='';
+  snap.docs.forEach(d=>{ const dt=d.data(); const li=document.createElement('li'); li.textContent = dt.amount + ' — ' + new Date(dt.date).toLocaleString(); ul.appendChild(li); });
+});
+</script>
+</body></html>

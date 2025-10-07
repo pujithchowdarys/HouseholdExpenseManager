@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Customer</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="assets/css/style.css"></head><body>
+<header class="topbar"><a href="business.html">← Back</a><h1>Customer Details</h1></header>
+<main class="container">
+  <h2 id="cust-name">Loading…</h2>
+  <p id="cust-balance"></p>
+  <div class="actions"><button id="add-tx">Add Transaction</button></div>
+  <h3>Transactions</h3>
+  <table id="cust-tx"><thead><tr><th>Date</th><th>Amount</th></tr></thead><tbody></tbody></table>
+</main>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-config.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/firestore.js"></script>
+<script>
+onAuthStateChanged(async user=>{
+  if(!user) location.href='index.html';
+  const id = localStorage.getItem('customerId');
+  if(!id) return alert('No customer selected');
+  const doc = await db.collection('customers').doc(id).get();
+  const data = doc.data();
+  document.getElementById('cust-name').textContent = data.name;
+  document.getElementById('cust-balance').textContent = 'Balance: ' + (data.balance||0);
+  loadTx(id);
+  document.getElementById('add-tx').addEventListener('click', async ()=>{
+    const amt = parseFloat(prompt('Amount (positive = given to customer)'));
+    if(isNaN(amt)) return;
+    await addBusinessTransaction(id, {amount: amt, date: Date.now()});
+    loadTx(id);
+  });
+});
+
+async function loadTx(customerId){
+  const snap = await db.collection('businessTx').where('customerId','==',customerId).orderBy('date','desc').get();
+  const tbody = document.querySelector('#cust-tx tbody'); tbody.innerHTML = '';
+  snap.docs.forEach(d=>{
+    const dt = d.data();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${new Date(dt.date).toLocaleString()}</td><td>${dt.amount}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+</body></html>
